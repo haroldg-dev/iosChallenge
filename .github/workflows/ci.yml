@@ -7,26 +7,28 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  build-ios:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      - name: 🍺 Install XcodeGen
+        run: |
+          brew install xcodegen
 
-      - name: Install dependencies (if any)
-        run: echo "No external dependencies"
+      - name: 🛠 Generate Xcode Project
+        run: |
+          xcodegen
 
-      - name: Build the app
+      - name: 🧪 Build iOS app (simulator)
         run: |
           xcodebuild clean build \
-            -project MySimpleApp.xcodeproj \
-            -scheme MySimpleApp \
+            -project iosChallenge.xcodeproj \
+            -scheme iosChallenge \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest'
 
-      - name: Done
-        run: echo "Build finished ✅"
+      - name: ✅ Done
+        run: echo "✅ Build completed!"

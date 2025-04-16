@@ -1,0 +1,26 @@
+name: iosChallenge
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "14.0"
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    PRODUCT_BUNDLE_IDENTIFIER: com.example.iosChallenge
+
+targets:
+  iosChallenge:
+    type: application
+    platform: iOS
+    deploymentTarget: "14.0"
+    sources: [iosChallenge]
+    resources: [Assets.xcassets]
+    info: Info.plist
+    settings:
+      base:
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.0.0
