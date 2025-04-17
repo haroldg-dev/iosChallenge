@@ -19,7 +19,8 @@ targets:
     deploymentTarget: "14.0"
     sources: [iosChallenge]
     resources: [Assets.xcassets]
-    info: Info.plist
+    info:
+      path: Info.plist
     settings:
       base:
         CURRENT_PROJECT_VERSION: 1
