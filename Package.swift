@@ -5,10 +5,16 @@ import PackageDescription
 
 let package = Package(
     name: "iosChallenge",
+    platforms: [
+        .iOS(.v14) // Specify the minimum iOS version
+    ],
+    products: [
+        .executable(name: "iosChallenge", targets: ["iosChallenge"]) // Declare as an executable
+    ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .executableTarget(
-            name: "iosChallenge"),
+            name: "iosChallenge",
+            path: "iosChallenge" // Ensure the correct path to your source files
+        ),
     ]
 )

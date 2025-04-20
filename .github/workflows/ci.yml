@@ -32,7 +32,8 @@ jobs:
             -project iosChallenge.xcodeproj \
             -scheme iosChallenge \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest'
+            -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' \
+            -configuration Debug
 
       - name: ✅ Done
         run: echo "✅ Build completed!"
