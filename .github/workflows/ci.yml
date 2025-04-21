@@ -38,6 +38,9 @@ jobs:
       - name: 🛠 Generate Xcode project
         run: xcodegen
 
+      - name: 🧼 Apply SwiftFormat
+        run: swiftformat . --swiftversion 5.0 --exclude build_output
+
       - name: 🧼 Lint Swift code
         run: swiftlint --strict || true
 
