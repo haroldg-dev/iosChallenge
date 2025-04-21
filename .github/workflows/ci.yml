@@ -41,6 +41,9 @@ jobs:
       - name: 🧼 Lint Swift code
         run: swiftlint --strict || true
 
+      - name: 🧹 Clean Derived Data
+        run: rm -rf ~/Library/Developer/Xcode/DerivedData
+
       - name: 🧪 Build app for iOS Simulator
         run: |
           xcodebuild clean build \
@@ -55,14 +58,8 @@ jobs:
       - name: 📤 Upload .app
         uses: actions/upload-artifact@v4
         with:
-          name: ios-app
+          name: ios-simulator-app
           path: build_output/Build/Products/Debug-iphonesimulator/*.app
-
-      - name: 📤 Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-app
-          path: build_artifacts/*.app
 
       - name: ✅ Done
         run: echo "✅ CI Build & Artifact Export Completed!"
