@@ -35,10 +35,25 @@ jobs:
       - name: 📊 Static analysis
         run: swiftlint analyze --strict || true
 
-      - name: 🔖 Set app version and build number
+      - name: 🏷️ Calculate next version
+        id: versioning
         run: |
-          echo "BUILD_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
-          echo "GIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          VERSION=${LAST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          if [[ "$GITHUB_REF" == "refs/heads/master" ]]; then
+            ((MAJOR++))
+            MINOR=0
+            PATCH=0
+          elif [[ "$GITHUB_REF" == "refs/heads/develop" ]]; then
+            ((MINOR++))
+            PATCH=0
+          else
+            ((PATCH++))
+          fi
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+          echo "New version: $NEW_TAG"
 
       - name: 🧪 Build app for iOS Simulator
         run: |
@@ -50,11 +65,19 @@ jobs:
             -derivedDataPath build_output \
             CODE_SIGNING_ALLOWED=NO \
             MARKETING_VERSION=1.0.0 \
-            CURRENT_PROJECT_VERSION=$BUILD_NUMBER
+            CURRENT_PROJECT_VERSION=$NEW_TAG
+
+      - name: 🏷️ Create Git Tag
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
 
       - name: 🏗 Rename output .app
         run: |
-          OUTPUT_NAME="iosChallenge-${BUILD_NUMBER}.0.0-${GIT_SHORT_SHA}.app"
+          OUTPUT_NAME="iosChallenge-${NEW_TAG}-dev.app"
           mv build_output/Build/Products/Debug-iphonesimulator/iosChallenge.app \
             build_output/Build/Products/Debug-iphonesimulator/$OUTPUT_NAME
 
