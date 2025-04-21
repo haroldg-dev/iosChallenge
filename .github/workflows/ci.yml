@@ -41,8 +41,23 @@ jobs:
       - name: 🧼 Lint Swift code
         run: swiftlint --strict || true
 
+      - name: 🧼 Swift format check
+        run: swiftformat . --lint --verbose --exclude build_output
+
+      - name: 📊 Static analysis
+        run: swiftlint analyze --strict || true
+
       - name: 🧹 Clean Derived Data
         run: rm -rf ~/Library/Developer/Xcode/DerivedData
+
+      - name: 🔖 Set app version and build number
+        run: |
+          echo "BUILD_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
+          echo "BUILD_VERSION=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "GIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo $BUILD_NUMBER
+          echo $BUILD_VERSION
+          echo $GIT_SHORT_SHA
 
       - name: 🧪 Build app for iOS Simulator
         run: |
@@ -52,7 +67,15 @@ jobs:
             -sdk iphonesimulator \
             -configuration Debug \
             -derivedDataPath build_output \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION=1.0.0 \
+            CURRENT_PROJECT_VERSION=$BUILD_NUMBER
+
+      - name: 🏗 Rename output .app
+        run: |
+          OUTPUT_NAME="iosChallenge-1.0.0-${GIT_SHORT_SHA}.app"
+          mv build_output/Build/Products/Debug-iphonesimulator/iosChallenge.app \
+            build_output/Build/Products/Debug-iphonesimulator/$OUTPUT_NAME
 
       - name: 📤 Upload .app
         uses: actions/upload-artifact@v4
