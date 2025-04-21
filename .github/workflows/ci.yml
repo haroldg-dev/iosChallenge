@@ -1,4 +1,4 @@
-name: iOS Build
+name: 🛠 iOS CI Build
 
 on:
   push:
@@ -9,31 +9,58 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_15.4.app/Contents/Developer
 
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🍺 Install XcodeGen
+      - name: 🔐 Setup security (macOS keychain for certs/profiles)
         run: |
-          brew install xcodegen
+          security create-keychain -p "" ios-build.keychain
+          security default-keychain -s ios-build.keychain
+          security unlock-keychain -p "" ios-build.keychain
+          security set-keychain-settings
 
-      - name: 🛠 Generate Xcode Project
+      - name: 🍺 Install dependencies
         run: |
-          xcodegen
+          brew install xcodegen swiftlint
 
-      - name: 🧹 Clean derived data
-        run: |
-          rm -rf ~/Library/Developer/Xcode/DerivedData
+      - name: 🧰 Restore Xcode derived data cache
+        uses: actions/cache@v3
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-xcode-derived-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-derived-
 
-      - name: 🧪 Build iOS app (simulator)
+      - name: 🛠 Generate Xcode project
+        run: xcodegen
+
+      - name: 🧼 Lint Swift code
+        run: swiftlint --strict || true
+
+      - name: 🧪 Build app for iOS Simulator
         run: |
           xcodebuild clean build \
             -project iosChallenge.xcodeproj \
             -scheme iosChallenge \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' \
-            -configuration Debug
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: 📦 Export .app bundle
+        run: |
+          mkdir -p build_artifacts
+          cp -R ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug-iphonesimulator/*.app build_artifacts/
+
+      - name: 📤 Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-app
+          path: build_artifacts/*.app
 
       - name: ✅ Done
-        run: echo "✅ Build completed!"
+        run: echo "✅ CI Build & Artifact Export Completed!"
