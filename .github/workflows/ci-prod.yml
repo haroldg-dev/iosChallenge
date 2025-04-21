@@ -1,0 +1,112 @@
+name: 🛠 iOS CI Signed Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_15.4.app/Contents/Developer
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 🔐 Setup security (macOS keychain for certs/profiles)
+        run: |
+          security create-keychain -p "" ios-build.keychain
+          security default-keychain -s ios-build.keychain
+          security unlock-keychain -p "" ios-build.keychain
+          security set-keychain-settings
+
+      - name: 🍺 Install dependencies
+        run: |
+          brew install xcodegen swiftlint
+
+      - name: 📦 Resolve Swift Package Manager dependencies
+        run: swift package resolve
+
+      - name: 🧰 Restore Xcode derived data cache
+        uses: actions/cache@v3
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-xcode-derived-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-derived-
+
+      - name: 🛠 Generate Xcode project
+        run: xcodegen
+
+      - name: 🧼 Apply SwiftFormat
+        run: swiftformat . --swiftversion 5.0 --exclude build_output
+
+      - name: 🧼 Lint Swift code
+        run: swiftlint --strict || true
+
+      - name: 📊 Static analysis
+        run: swiftlint analyze --strict || true
+
+      - name: 🧹 Clean Derived Data
+        run: rm -rf ~/Library/Developer/Xcode/DerivedData
+
+      - name: 🔖 Set app version and build number
+        run: |
+          echo "BUILD_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
+          echo "BUILD_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "GIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: 📲 Set Apple Certificates
+        env:
+          IOS_CERT_BASE64: ${{ secrets.IOS_CERT_DIST_BASE64 }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_DIST_BASE64 }}
+          IOS_CERT_PASS: ${{ secrets.IOS_CERT_PASS }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/cert.p12
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+
+          echo "$IOS_CERT_BASE64" | base64 -d -o "$CERT_PATH"
+          echo "$IOS_PROFILE_BASE64" | base64 -d -o "$PROFILE_PATH"
+
+          security import "$CERT_PATH" -k ~/Library/Keychains/login.keychain-db -P "$IOS_CERT_PASS" -T /usr/bin/codesign
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          UUID=$(grep -aA1 UUID "$PROFILE_PATH" | grep -io "[-A-F0-9]\{36\}")
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+          echo "PROVISIONING_PROFILE_UUID=$UUID" >> $GITHUB_ENV
+
+      - name: 🧪 Build signed iOS app
+        env:
+          PROVISIONING_PROFILE_SPECIFIER: ${{ env.PROVISIONING_PROFILE_UUID }}
+          DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild clean build \
+            -project iosChallenge.xcodeproj \
+            -scheme iosChallenge \
+            -configuration Release \
+            -derivedDataPath build_output \
+            -allowProvisioningUpdates \
+            -destination generic/platform=iOS \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
+            PROVISIONING_PROFILE=$PROVISIONING_PROFILE_SPECIFIER \
+            MARKETING_VERSION=1.0.0 \
+            CURRENT_PROJECT_VERSION=$BUILD_NUMBER
+
+      - name: 🏗 Rename .app
+        run: |
+          OUTPUT_NAME="iosChallenge-${BUILD_NUMBER}.0.0.app"
+          mv build_output/Build/Products/Release-iphoneos/iosChallenge.app \
+            build_output/Build/Products/Release-iphoneos/$OUTPUT_NAME
+
+      - name: 📤 Upload signed .app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-device-signed-app
+          path: build_output/Build/Products/Release-iphoneos/*.app
+
+      - name: ✅ Done
+        run: echo "✅ Signed iOS Build Completed!"
