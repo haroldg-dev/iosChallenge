@@ -50,7 +50,6 @@ jobs:
             -project iosChallenge.xcodeproj \
             -scheme iosChallenge \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' \
             -configuration Debug \
             -derivedDataPath build_output \
             CODE_SIGNING_ALLOWED=NO
