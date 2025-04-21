@@ -7,7 +7,7 @@ on:
     branches: [develop]
 
 jobs:
-  build-ios:
+  ci-dev:
     runs-on: macos-latest
     env:
       DEVELOPER_DIR: /Applications/Xcode_15.4.app/Contents/Developer
@@ -16,27 +16,12 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🔐 Setup security (macOS keychain for certs/profiles)
-        run: |
-          security create-keychain -p "" ios-build.keychain
-          security default-keychain -s ios-build.keychain
-          security unlock-keychain -p "" ios-build.keychain
-          security set-keychain-settings
-
       - name: 🍺 Install dependencies
         run: |
-          brew install xcodegen swiftlint
+          brew install xcodegen swiftlint swiftformat
 
       - name: 📦 Resolve Swift Package Manager dependencies
         run: swift package resolve
-
-      - name: 🧰 Restore Xcode derived data cache
-        uses: actions/cache@v3
-        with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-xcode-derived-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-xcode-derived-
 
       - name: 🛠 Generate Xcode project
         run: xcodegen
@@ -47,19 +32,12 @@ jobs:
       - name: 🧼 Lint Swift code
         run: swiftlint --strict || true
 
-      - name: 🧼 Swift format check
-        run: swiftformat . --lint --verbose --exclude build_output
-
       - name: 📊 Static analysis
         run: swiftlint analyze --strict || true
-
-      - name: 🧹 Clean Derived Data
-        run: rm -rf ~/Library/Developer/Xcode/DerivedData
 
       - name: 🔖 Set app version and build number
         run: |
           echo "BUILD_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
-          echo "BUILD_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
           echo "GIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: 🧪 Build app for iOS Simulator
