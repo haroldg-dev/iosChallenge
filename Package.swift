@@ -14,7 +14,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "iosChallenge",
-            path: "iosChallenge" // Ensure the correct path to your source files
+            path: "./iosChallenge" // Ensure the correct path to your source files
         ),
     ]
 )
