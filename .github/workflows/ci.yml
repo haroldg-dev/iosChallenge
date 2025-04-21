@@ -57,7 +57,7 @@ jobs:
           cp -R ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug-iphonesimulator/*.app build_artifacts/
 
       - name: 📤 Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-app
           path: build_artifacts/*.app
